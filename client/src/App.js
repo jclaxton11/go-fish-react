@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Container } from 'react-bootstrap';
+import { Deck } from './components/Deck'
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -24,15 +26,10 @@ function App() {
   };
 
   return (
-    <div>
-      <h1>Go Fish Game</h1>
-      <button onClick={joinGame}>Join Game</button>
-      <ul>
-        {messages.map((msg, idx) => (
-          <li key={idx}>{JSON.stringify(msg)}</li>
-        ))}
-      </ul>
-    </div>
+    <Container className="App p-3">
+      <h2 className="mb-4 text-center">Go Fish - 52 Card Deck</h2>
+      <Deck />
+    </Container>
   );
 }
 
