@@ -1,63 +1,81 @@
 import React, { useEffect, useState } from 'react';
 import { Container } from 'react-bootstrap';
 import Card from './CardComponent';
-
-const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
-const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-
-const generateDeck = () => {
-  const deck = [];
-  for (const suit of suits) {
-    for (const value of values) {
-      deck.push({ value, suit });
-    }
-  }
-  return deck;
-};
-
-const shuffle = (array) => {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-};
+import { initGame, askForCard, drawCard, checkForBooks } from '../GameEngine';
 
 export const Deck = ({inputMode}) => {
-  const [aiHand, setAiHand] = useState([]);
-  const [playerHand, setPlayerHand] = useState([]);
-  const [deckCard, setDeckCard] = useState({ value: '?', suit: '?' });
-  const [mode, setMode] = useState(inputMode)
+    const [game, setGame] = useState(null);
+    const [aiHand, setAiHand] = useState([]);
+    const [playerHand, setPlayerHand] = useState([]);
+    const [deckCard, setDeckCard] = useState({ value: '?', suit: '?' });
+    const [mode, setMode] = useState(inputMode)
 
-  useEffect(() => {
-    const fullDeck = shuffle(generateDeck());
-    setAiHand(fullDeck.slice(0, 6));
-    setPlayerHand(fullDeck.slice(6, 12));
-  }, []);
+    useEffect(() => {
+        setGame(initGame());
+    }, []);
 
-  return (
-    <Container fluid className="d-flex flex-column align-items-center justify-content-between" style={{ minHeight: '70vh' }}>
-      
-      <div>Opponent</div>
-      <div className="d-flex justify-content-center mb-4" style={{ minHeight: '6rem' }}>
-        {aiHand.map((card, idx) => (
-          <Card key={idx} value="?" suit="?" />
-        ))}
-      </div>
+    if (!game) return <div>Loading...</div>;
 
-      <div className="mb-4">
-        <Card value={deckCard.value} suit={deckCard.suit} />
-      </div>
+    const handleAsk = (value) => {
+        const { success, fromHand, toHand } = askForCard(game.playerHand, game.opponentHand, value);
+        let newPlayerHand = fromHand;
+        let newOpponentHand = toHand;
+        let newDeck = game.deck;
+    
+        if (!success) {
+            const drawResult = drawCard(newPlayerHand, newDeck);
+            newPlayerHand = drawResult.hand;
+            newDeck = drawResult.deck;
+        }
+        const { books, remainingHand } = checkForBooks(newPlayerHand);
 
-      <div className="d-flex justify-content-center mt-4">
-        {playerHand.map((card, idx) => (
-          <Card key={idx} value={card.value} suit={card.suit} />
-        ))}
-      </div>
-      <div>Your Cards</div>
-    </Container>
-  );
-};
+        setGame({
+            ...game,
+            playerHand: remainingHand,
+            opponentHand: newOpponentHand,
+            playerBooks: [...game.playerBooks, ...books],
+            deck: newDeck,
+            currentPlayer: 'opponent',
+        });
+    };
+
+    return (
+        <Container fluid className="d-flex flex-column align-items-center justify-content-between" style={{ minHeight: '70vh' }}>
+          
+          <div>Opponent</div>
+          <div className="d-flex justify-content-center mb-4" style={{ minHeight: '6rem' }}>
+            {game.opponentHand.map((_, idx) => (
+              <Card key={idx} value="?" suit="?" />
+            ))}
+          </div>
+    
+          <div className="mb-4">
+            {game.deck.length > 0 ? (
+              <Card value="?" suit="?" />
+            ) : (
+              <div>No Cards Left</div>
+            )}
+          </div>
+    
+          <div className="d-flex justify-content-center mt-4 flex-wrap">
+            {game.playerHand.map((card, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAsk(card.value)}
+                style={{ background: 'none', border: 'none', padding: 0 }}
+              >
+                <Card value={card.value} suit={card.suit} />
+              </button>
+            ))}
+          </div>
+          <div>Your Cards</div>
+    
+          <div className="mt-3">
+            <strong>Your Books:</strong> {game.playerBooks.join(', ') || 'None'}
+          </div>
+        </Container>
+      );
+    };
+    
 
 export default Deck;
