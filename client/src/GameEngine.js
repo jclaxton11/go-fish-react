@@ -76,9 +76,73 @@ function initGame() {
   };
 }
 
+function aiChooseCard(opponentHand) {
+  const counts = {};
+  for (const card of opponentHand) {
+    counts[card.value] = (counts[card.value] || 0) + 1;
+  }
+
+  const candidateValues = Object.keys(counts);
+  if (candidateValues.length === 0) return null;
+
+  // Randomly pick a value that the AI has at least one of
+  const randomIndex = Math.floor(Math.random() * candidateValues.length);
+  return candidateValues[randomIndex];
+}
+
+function opponentTurn(gameState) {
+
+  if (gameState.currentPlayer !== 'opponent') {
+    console.log("Not opponent's turn, skipping");
+    return gameState;
+  }
+
+  const valueToAsk = aiChooseCard(gameState.opponentHand);
+  if (!valueToAsk) {
+    console.log("AI has no card to ask for, skipping turn");
+    return gameState;
+  }
+
+  console.log(`AI asks for ${valueToAsk}`);
+
+  const result = askForCard(
+    gameState.opponentHand,
+    gameState.playerHand,
+    valueToAsk
+  );
+
+  let updatedOpponentHand = result.fromHand;
+  let updatedPlayerHand = result.toHand;
+  let updatedDeck = gameState.deck;
+
+  if (!result.success) {
+    // If AI's ask fails, it draws a card
+    const drawResult = drawCard(updatedOpponentHand, updatedDeck);
+    updatedOpponentHand = drawResult.hand;
+    updatedDeck = drawResult.deck;
+  }
+
+  const { books, remainingHand } = checkForBooks(updatedOpponentHand);
+  updatedOpponentHand = remainingHand;
+
+
+  return {
+    ...gameState,
+    opponentHand: updatedOpponentHand,
+    playerHand: updatedPlayerHand,
+    opponentBooks: [...gameState.opponentBooks, ...books],
+    deck: updatedDeck,
+    currentPlayer: 'player',
+  };
+}
+
+
+
+
 module.exports = {
   initGame,
   askForCard,
   drawCard,
   checkForBooks,
+  opponentTurn,
 };

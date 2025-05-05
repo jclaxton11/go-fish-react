@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container } from 'react-bootstrap';
 import Card from './CardComponent';
-import { initGame, askForCard, drawCard, checkForBooks } from '../GameEngine';
+import { initGame, askForCard, drawCard, checkForBooks, opponentTurn } from '../GameEngine';
 
 export const Deck = ({inputMode}) => {
     const [game, setGame] = useState(null);
@@ -17,26 +17,35 @@ export const Deck = ({inputMode}) => {
     if (!game) return <div>Loading...</div>;
 
     const handleAsk = (value) => {
-        const { success, fromHand, toHand } = askForCard(game.playerHand, game.opponentHand, value);
-        let newPlayerHand = fromHand;
-        let newOpponentHand = toHand;
-        let newDeck = game.deck;
+      const { success, fromHand, toHand } = askForCard(game.playerHand, game.opponentHand, value);
+      let newPlayerHand = fromHand;
+      let newOpponentHand = toHand;
+      let newDeck = game.deck;
     
-        if (!success) {
-            const drawResult = drawCard(newPlayerHand, newDeck);
-            newPlayerHand = drawResult.hand;
-            newDeck = drawResult.deck;
-        }
-        const { books, remainingHand } = checkForBooks(newPlayerHand);
-
-        setGame({
-            ...game,
-            playerHand: remainingHand,
-            opponentHand: newOpponentHand,
-            playerBooks: [...game.playerBooks, ...books],
-            deck: newDeck,
-            currentPlayer: 'opponent',
-        });
+      if (!success) {
+        const drawResult = drawCard(newPlayerHand, newDeck);
+        newPlayerHand = drawResult.hand;
+        newDeck = drawResult.deck;
+      }
+    
+      const { books: playerBooks, remainingHand: remainingPlayerHand } = checkForBooks(newPlayerHand);
+    
+      let updatedGame = {
+        ...game,
+        playerHand: remainingPlayerHand,
+        opponentHand: newOpponentHand,
+        playerBooks: [...game.playerBooks, ...playerBooks],
+        deck: newDeck,
+        currentPlayer: 'opponent', // Set the game to the opponent's turn
+      };
+    
+      setGame(updatedGame);
+    
+      // Trigger AI's turn after a 2-second delay to simulate thinking time
+      setTimeout(() => {
+        const aiUpdatedGame = opponentTurn(updatedGame);
+        setGame(aiUpdatedGame);
+      }, 2000); 
     };
 
     return (
