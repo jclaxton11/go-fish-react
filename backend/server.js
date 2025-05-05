@@ -28,18 +28,18 @@ wss.on("connection", (ws) => {
               return;
             }
 
-            // // Step 2: Broadcast to other players in the game that a player has joined
-            // wss.clients.forEach((client) => {
-            //   if (client !== ws && client.readyState === WebSocket.OPEN) {
-            //     client.send(
-            //       JSON.stringify({
-            //         type: "PLAYER_JOINED",
-            //         playerId: data.playerId,
-            //         gameId: data.gameId
-            //       })
-            //     );
-            //   }
-            // });
+            // Step 2: Broadcast to other players in the game that a player has joined
+            wss.clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(
+                  JSON.stringify({
+                    type: "PLAYER_JOINED",
+                    playerId: data.playerId,
+                    gameId: data.gameId
+                  })
+                );
+              }
+            });
           }
         );
         break;
