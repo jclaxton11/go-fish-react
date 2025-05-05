@@ -49,19 +49,19 @@ export const SinglePlayer = ({ inputMode, setGameStarted }) => {
   if (!game) return <div>Loading...</div>;
 
   const handleAsk = (value) => {
-    const { success, fromHand, toHand } = askForCard(
-      game.playerHand,
-      game.opponentHand,
-      value
-    );
+    alert(`You asked the opponent for ${value}s.`)
+    const { success, fromHand, toHand } = askForCard(game.playerHand, game.opponentHand, value);
     let newPlayerHand = fromHand;
     let newOpponentHand = toHand;
     let newDeck = game.deck;
-
+  
     if (!success) {
       const drawResult = drawCard(newPlayerHand, newDeck);
+      alert(`Your opponent did not have any ${value}s. You drew a ${drawResult.card.value}.`)
       newPlayerHand = drawResult.hand;
       newDeck = drawResult.deck;
+    } else {
+      alert(`Your opponent gave you ${value}s.`)
     }
 
     const { books: playerBooks, remainingHand: remainingPlayerHand } =
