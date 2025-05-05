@@ -55,10 +55,12 @@ function askForCard(fromHand, toHand, value) {
 }
 
 function drawCard(hand, deck) {
-  if (deck.length === 0) return { hand, deck };
+  if (deck.length === 0) return { hand, deck, card: null };
+  const drawnCard = deck[0];
   return {
-    hand: [...hand, deck[0]],
+    hand: [...hand, drawnCard],
     deck: deck.slice(1),
+    card: drawnCard, 
   };
 }
 
@@ -102,7 +104,7 @@ function opponentTurn(gameState) {
     console.log("AI has no card to ask for, skipping turn");
     return gameState;
   }
-
+  alert(`Your opponent asks: "Do you have any ${valueToAsk}s?"`);
   console.log(`AI asks for ${valueToAsk}`);
 
   const result = askForCard(
@@ -117,15 +119,18 @@ function opponentTurn(gameState) {
 
   if (!result.success) {
     // If AI's ask fails, it draws a card
+    alert(`You say "Go Fish!"`);
     const drawResult = drawCard(updatedOpponentHand, updatedDeck);
     updatedOpponentHand = drawResult.hand;
     updatedDeck = drawResult.deck;
+  } else {
+    alert(`You gave the opponent your ${valueToAsk}s.`)
   }
 
   const { books, remainingHand } = checkForBooks(updatedOpponentHand);
   updatedOpponentHand = remainingHand;
 
-
+  alert(`It is now your turn.`);
   return {
     ...gameState,
     opponentHand: updatedOpponentHand,
