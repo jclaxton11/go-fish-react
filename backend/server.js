@@ -19,7 +19,7 @@ wss.on("connection", (ws) => {
       case "JOIN_GAME":
         console.log(`${data.playerId} joined ${data.gameId}`);
         // Step 1: Add player to Redis (could store a game state, or player info)
-        redisClient.sadd(
+        redisClient.sAdd(
           `game:${data.gameId}:players`,
           data.playerId,
           (err, res) => {
@@ -60,6 +60,6 @@ wss.on("connection", (ws) => {
   ws.send(JSON.stringify({ type: "CONNECTED" }));
 });
 
-server.listen(3005, () => {
-  console.log("WebSocket server listening on port 3005");
+server.listen(5000, () => {
+  console.log("WebSocket server listening on port 5000");
 });

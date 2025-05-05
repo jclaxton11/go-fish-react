@@ -1,9 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { Container, Button, Modal } from 'react-bootstrap';
-import Card from './CardComponent';
-import { initGame, askForCard, drawCard, checkForBooks, opponentTurn } from '../GameEngine';
+import React, { useEffect, useState } from "react";
+import { Container, Button, Modal } from "react-bootstrap";
+import Card from "./CardComponent";
+import {
+  initGame,
+  askForCard,
+  drawCard,
+  checkForBooks,
+  opponentTurn
+} from "../GameEngine";
 
-export const Deck = ({inputMode, setGameStarted}) => {
+export const SinglePlayer = ({ inputMode, setGameStarted }) => {
   const [game, setGame] = useState(null);
   const [winner, setWinner] = useState(null); // Track the winner
   const [showModal, setShowModal] = useState(false); // Show the popup
@@ -11,81 +17,104 @@ export const Deck = ({inputMode, setGameStarted}) => {
 
   function sortHand(hand) {
     const valueOrder = {
-      A: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, J: 11, Q: 12, K: 13,
+      A: 1,
+      2: 2,
+      3: 3,
+      4: 4,
+      5: 5,
+      6: 6,
+      7: 7,
+      8: 8,
+      9: 9,
+      10: 10,
+      J: 11,
+      Q: 12,
+      K: 13
     };
     return hand.sort((a, b) => valueOrder[a.value] - valueOrder[b.value]);
-  };
+  }
 
   useEffect(() => {
-      const initialGame = initGame();
-      const sortedPlayerHand = sortHand(initialGame.playerHand);
-      const sortedOpponentHand = sortHand(initialGame.opponentHand);
-      
-      setGame({
-        ...initialGame,
-        playerHand: sortedPlayerHand,
-        opponentHand: sortedOpponentHand,
-      });
+    const initialGame = initGame();
+    const sortedPlayerHand = sortHand(initialGame.playerHand);
+    const sortedOpponentHand = sortHand(initialGame.opponentHand);
+
+    setGame({
+      ...initialGame,
+      playerHand: sortedPlayerHand,
+      opponentHand: sortedOpponentHand
+    });
   }, []);
 
-  if (!game) return <div>Loading...</div>;   
+  if (!game) return <div>Loading...</div>;
 
   const handleAsk = (value) => {
-    const { success, fromHand, toHand } = askForCard(game.playerHand, game.opponentHand, value);
+    const { success, fromHand, toHand } = askForCard(
+      game.playerHand,
+      game.opponentHand,
+      value
+    );
     let newPlayerHand = fromHand;
     let newOpponentHand = toHand;
     let newDeck = game.deck;
-  
+
     if (!success) {
       const drawResult = drawCard(newPlayerHand, newDeck);
       newPlayerHand = drawResult.hand;
       newDeck = drawResult.deck;
     }
-  
-    const { books: playerBooks, remainingHand: remainingPlayerHand } = checkForBooks(newPlayerHand);
-  
+
+    const { books: playerBooks, remainingHand: remainingPlayerHand } =
+      checkForBooks(newPlayerHand);
+
     let updatedGame = {
       ...game,
       playerHand: sortHand(remainingPlayerHand),
       opponentHand: sortHand(newOpponentHand),
       playerBooks: [...game.playerBooks, ...playerBooks],
       deck: newDeck,
-      currentPlayer: 'opponent', // Set the game to the opponent's turn
+      currentPlayer: "opponent" // Set the game to the opponent's turn
     };
-  
+
     // Update UI with player's turn results
     setGame(updatedGame);
-  
+
     // Check if game ends (any player has no cards left)
-    if (updatedGame.playerHand.length === 0 || updatedGame.opponentHand.length === 0) {
+    if (
+      updatedGame.playerHand.length === 0 ||
+      updatedGame.opponentHand.length === 0
+    ) {
       endGame(updatedGame);
       return;
     }
-  
+
     // Trigger AI's turn after a 2-second delay to simulate thinking time
     setTimeout(() => {
       const aiUpdatedGame = opponentTurn(updatedGame);
       aiUpdatedGame.opponentHand = sortHand(aiUpdatedGame.opponentHand);
       setGame(aiUpdatedGame); // Update state with the new opponent hand and deck
-  
+
       // Check if game ends after AI's turn
-      if (aiUpdatedGame.playerHand.length === 0 || aiUpdatedGame.opponentHand.length === 0) {
+      if (
+        aiUpdatedGame.playerHand.length === 0 ||
+        aiUpdatedGame.opponentHand.length === 0
+      ) {
         endGame(aiUpdatedGame); // End the game if any player runs out of cards
       }
     }, 2000);
   };
-  
+
   const endGame = (finalGameState) => {
     const playerBooksCount = finalGameState.playerBooks.length;
     const opponentBooksCount = finalGameState.opponentBooks.length;
-    let winner = '';
+    let winner = "";
 
     if (playerBooksCount > opponentBooksCount) {
-      winner = 'Player';
+      winner = "Player";
     } else if (playerBooksCount < opponentBooksCount) {
-      winner = 'AI';
+      winner = "AI";
     } else {
-      winner = 'It\'s a tie!';
+      winner = "It's a tie!";
     }
 
     setWinner(winner);
@@ -102,12 +131,20 @@ export const Deck = ({inputMode, setGameStarted}) => {
   };
 
   return (
-    <Container fluid className="d-flex flex-column align-items-center justify-content-between" style={{ minHeight: '70vh' }}>
+    <Container
+      fluid
+      className="d-flex flex-column align-items-center justify-content-between"
+      style={{ minHeight: "70vh" }}
+    >
       <div>Opponent</div>
       <div className="mt-3">
-        <strong>Opponent's Books: </strong>{game.opponentBooks.join(', ') || 'None'}
+        <strong>Opponent's Books: </strong>
+        {game.opponentBooks.join(", ") || "None"}
       </div>
-      <div className="d-flex justify-content-center mb-4" style={{ minHeight: '6rem' }}>
+      <div
+        className="d-flex justify-content-center mb-4"
+        style={{ minHeight: "6rem" }}
+      >
         {game.opponentHand.map((_, idx) => (
           <Card key={idx} value="?" suit="?" />
         ))}
@@ -126,7 +163,7 @@ export const Deck = ({inputMode, setGameStarted}) => {
           <button
             key={idx}
             onClick={() => handleAsk(card.value)}
-            style={{ background: 'none', border: 'none', padding: 0 }}
+            style={{ background: "none", border: "none", padding: 0 }}
           >
             <Card value={card.value} suit={card.suit} />
           </button>
@@ -135,7 +172,7 @@ export const Deck = ({inputMode, setGameStarted}) => {
       <div>Your Cards</div>
 
       <div className="mt-3">
-        <strong>Your Books:</strong> {game.playerBooks.join(', ') || 'None'}
+        <strong>Your Books:</strong> {game.playerBooks.join(", ") || "None"}
       </div>
 
       {/* Modal for end game */}
@@ -145,11 +182,15 @@ export const Deck = ({inputMode, setGameStarted}) => {
         </Modal.Header>
         <Modal.Body>{winner} wins!</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleReturnHome}>Return Home</Button>
-          <Button variant="primary" onClick={handleRestart}>Restart Game</Button>
+          <Button variant="secondary" onClick={handleReturnHome}>
+            Return Home
+          </Button>
+          <Button variant="primary" onClick={handleRestart}>
+            Restart Game
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
-    );
-  };
-export default Deck;
+  );
+};
+export default SinglePlayer;

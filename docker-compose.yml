@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  backend:
+    build: .
+    container_name: backend
+    ports:
+      - "5000:5000" # Map port 5000 on your host to port 5000 in the container
+    environment:
+      - REDIS_HOST=redis # This is the name of the Redis service defined below
+    depends_on:
+      - redis
+  redis:
+    image: redis:alpine # Using a lightweight Redis image
+    container_name: redis
+    ports:
+      - "6379:6379" # Expose Redis on port 6379

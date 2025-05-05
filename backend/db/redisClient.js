@@ -2,7 +2,7 @@ const redis = require("redis");
 
 const client = redis.createClient({
   socket: {
-    host: "127.0.0.1", // use IPv4 explicitly
+    host: "redis", // This is the service name defined in docker-compose.yml
     port: 6379
   }
 });

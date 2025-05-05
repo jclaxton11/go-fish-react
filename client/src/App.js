@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Container, Button } from "react-bootstrap";
-import { Deck } from "./components/Deck";
+import { SinglePlayer } from "./components/SinglePlayer";
+import { v4 as uuidv4 } from "uuid";
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
   const socket = useRef(null);
   const [mode, setMode] = useState(null);
+  const [gameId, setGameId] = useState(null);
 
   useEffect(() => {
-    socket.current = new WebSocket("ws://localhost:3005");
+    socket.current = new WebSocket("ws://localhost:5000");
 
     // Handle incoming messages from server
     socket.current.onmessage = (event) => {
@@ -22,15 +24,16 @@ function App() {
   }, []);
 
   // Function to handle joining a game
-  const joinGame = () => {
+  const joinMultiplayerGame = (gameId) => {
     console.log("Joining game...");
+    const playerId = uuidv4(); // Unique player ID for each participant
 
     // Send a JOIN message to the server with necessary game details
     socket.current.send(
       JSON.stringify({
         type: "JOIN_GAME",
-        gameId: "abc123", // Example game ID
-        playerId: "player1" // Example player ID
+        gameId: gameId, // Example game ID
+        playerId: playerId // Example player ID
       })
     );
   };
@@ -42,7 +45,9 @@ function App() {
 
     // If the game is multiplayer, try to join the game
     if (mode === "multiplayer") {
-      joinGame();
+      const gameId = Math.random().toString(36).substr(2, 4); // Random 4-character game ID
+      setGameId(gameId);
+      joinMultiplayerGame(gameId);
     }
 
     setGameStarted(true);
@@ -95,7 +100,16 @@ function App() {
             : ""}
         </div>
       </div>
-      <Deck inputMode={mode} setGameStarted={setGameStarted} />
+
+      {mode === "singleplayer" && (
+        <SinglePlayer inputMode={mode} setGameStarted={setGameStarted} />
+      )}
+      {mode === "multiplayer" && (
+        <div className="text-center">
+          <h3>Multiplayer Mode</h3>
+          <p>Waiting for other players...</p>
+        </div>
+      )}
     </Container>
   );
 }
