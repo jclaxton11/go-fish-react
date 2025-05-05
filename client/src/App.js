@@ -65,7 +65,7 @@ function App() {
         </div>
         <div className="col-2">{mode === 'multiplayer' ? 'Multiplayer' : mode === 'singleplayer' ? 'Single Player' : ''}</div>
       </div>
-      <Deck inputMode={mode} />
+      <Deck inputMode={mode} setGameStarted={setGameStarted}/>
     </Container>
   );
 }
