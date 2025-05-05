@@ -1,15 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { Container, Button, Modal } from "react-bootstrap";
 import Card from "./CardComponent";
-import { initGame, askForCard, drawCard, checkForBooks } from "../GameEngine";
+import {
+  askForCardMultiplayer,
+  drawCard,
+  checkForBooks,
+  initMultiplayerGame
+} from "../GameEngine";
+import { useNavigate } from "react-router-dom";
 
-export const MultiPlayer = ({ inputMode, setGameStarted }) => {
+const MultiPlayer = ({ socket, playerId, players, gameId }) => {
+  console.log("players", players);
+  console.log("gameId", gameId);
+  console.log("playerId", playerId);
+
   const [game, setGame] = useState(null);
-  const [winner, setWinner] = useState(null); // Track the winner
-  const [showModal, setShowModal] = useState(false); // Show the popup
-  const [currentPlayer, setCurrentPlayer] = useState(0); // Track whose turn it is (0 to 5 for up to 6 players)
+  const [winner, setWinner] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [currentPlayer, setCurrentPlayer] = useState(0); // index of current player's turn
+  const navigate = useNavigate();
 
-  // Sort hand based on card value
   function sortHand(hand) {
     const valueOrder = {
       A: 1,
@@ -30,29 +40,46 @@ export const MultiPlayer = ({ inputMode, setGameStarted }) => {
   }
 
   useEffect(() => {
-    const initialGame = initGame();
-    const sortedHands = initialGame.players.map((player) =>
-      sortHand(player.hand)
-    );
+    if (players.length > 0) {
+      const initialGame = initMultiplayerGame(players.length);
+      const sortedHands = initialGame.players.map(sortHand);
 
-    setGame({
-      ...initialGame,
-      players: sortedHands
-    });
-  }, []);
+      setGame({
+        ...initialGame,
+        players: sortedHands,
+        playerBooks: new Array(players.length).fill([]),
+        deck: initialGame.deck
+      });
+    }
+  }, [players]);
 
-  if (!game) return <div>Loading...</div>;
+  useEffect(() => {
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-  // Handle the player's request to ask for a card
+      if (data.type === "NEXT_TURN") {
+        setCurrentPlayer(data.nextPlayer);
+      }
+    };
+  }, [socket]);
+
+  if (!game) return <div>Loading game...</div>;
+
+  const playerIndex = players.findIndex((id) => id === playerId);
+  const isMyTurn = currentPlayer === playerIndex;
+
   const handleAsk = (value) => {
-    const currentPlayerHand = game.players[currentPlayer];
-    const nextPlayer = (currentPlayer + 1) % game.players.length; // Move to the next player
+    if (!isMyTurn) return;
 
-    const { success, fromHand, toHand } = askForCard(
-      currentPlayerHand,
+    const currentHand = game.players[currentPlayer];
+    const nextPlayer = (currentPlayer + 1) % game.players.length;
+
+    const { success, fromHand, toHand } = askForCardMultiplayer(
+      currentHand,
       game.players[nextPlayer],
       value
     );
+
     let updatedCurrentHand = fromHand;
     let updatedNextHand = toHand;
     let newDeck = game.deck;
@@ -63,51 +90,63 @@ export const MultiPlayer = ({ inputMode, setGameStarted }) => {
       newDeck = drawResult.deck;
     }
 
-    const { books: playerBooks, remainingHand } =
-      checkForBooks(updatedCurrentHand);
-
+    const { books, remainingHand } = checkForBooks(updatedCurrentHand);
     const updatedPlayers = [...game.players];
     updatedPlayers[currentPlayer] = sortHand(remainingHand);
     updatedPlayers[nextPlayer] = sortHand(updatedNextHand);
 
-    let updatedGame = {
+    const updatedPlayerBooks = [...game.playerBooks];
+    updatedPlayerBooks[currentPlayer] = [
+      ...(updatedPlayerBooks[currentPlayer] || []),
+      ...books
+    ];
+
+    const updatedGame = {
       ...game,
       players: updatedPlayers,
-      playerBooks: [...game.playerBooks, ...playerBooks],
       deck: newDeck,
-      currentPlayer: nextPlayer // Move to the next player
+      playerBooks: updatedPlayerBooks
     };
 
     setGame(updatedGame);
+    const nextTurn = (currentPlayer + 1) % game.players.length;
+    socket.send(
+      JSON.stringify({
+        type: "NEXT_TURN",
+        gameId,
+        nextPlayer: nextTurn
+      })
+    );
 
-    // Check for game end
-    if (updatedGame.players.some((playerHand) => playerHand.length === 0)) {
+    if (updatedPlayers.some((hand) => hand.length === 0)) {
       endGame(updatedGame);
-      return;
     }
   };
 
-  const endGame = (finalGameState) => {
-    const playerBooksCounts = finalGameState.players.map(
-      (_, idx) => finalGameState.playerBooks[idx]?.length || 0
-    );
-    const maxBooks = Math.max(...playerBooksCounts);
-    const winnerIndex = playerBooksCounts.findIndex(
-      (count) => count === maxBooks
-    );
-    const winner = `Player ${winnerIndex + 1}`;
-
-    setWinner(winner);
-    setShowModal(true); // Show the winner popup
+  const endGame = (finalGame) => {
+    const scores = finalGame.playerBooks.map((books) => books.length || 0);
+    const maxScore = Math.max(...scores);
+    const winnerIndex = scores.findIndex((score) => score === maxScore);
+    setWinner(`Player ${winnerIndex + 1}`);
+    setShowModal(true);
   };
 
   const handleRestart = () => {
-    setGame(initGame()); // Restart the game
+    const restartedGame = initMultiplayerGame(players.length);
+    const sortedHands = restartedGame.players.map(sortHand);
+
+    setGame({
+      ...restartedGame,
+      players: sortedHands,
+      playerBooks: new Array(players.length).fill([]),
+      deck: restartedGame.deck
+    });
+    setCurrentPlayer(0);
     setShowModal(false);
   };
 
   const handleReturnHome = () => {
-    setGameStarted(false);
+    navigate("/");
   };
 
   return (
@@ -116,16 +155,24 @@ export const MultiPlayer = ({ inputMode, setGameStarted }) => {
       className="d-flex flex-column align-items-center justify-content-between"
       style={{ minHeight: "70vh" }}
     >
-      <div>Opponent</div>
       <div className="mt-3">
-        <strong>Player {currentPlayer + 1}'s Books: </strong>
-        {game.playerBooks.join(", ") || "None"}
+        <strong>Game ID:</strong> {gameId}
       </div>
+      <div className="mt-3">
+        <strong>Player {playerIndex + 1}</strong>{" "}
+        {isMyTurn ? "(Your turn)" : "(Waiting)"}
+      </div>
+
+      <div className="mt-3">
+        <strong>Your Books:</strong>{" "}
+        {game.playerBooks[playerIndex]?.join(", ") || "None"}
+      </div>
+
       <div
         className="d-flex justify-content-center mb-4"
         style={{ minHeight: "6rem" }}
       >
-        {game.players[currentPlayer].map((_, idx) => (
+        {game.players[playerIndex].map((_, idx) => (
           <Card key={idx} value="?" suit="?" />
         ))}
       </div>
@@ -139,19 +186,19 @@ export const MultiPlayer = ({ inputMode, setGameStarted }) => {
       </div>
 
       <div className="d-flex justify-content-center mt-4 flex-wrap">
-        {game.players[currentPlayer].map((card, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleAsk(card.value)}
-            style={{ background: "none", border: "none", padding: 0 }}
-          >
-            <Card value={card.value} suit={card.suit} />
-          </button>
-        ))}
+        {isMyTurn &&
+          game.players[playerIndex].map((card, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleAsk(card.value)}
+              style={{ background: "none", border: "none", padding: 0 }}
+            >
+              <Card value={card.value} suit={card.suit} />
+            </button>
+          ))}
       </div>
       <div>Your Cards</div>
 
-      {/* Modal for end game */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Game Over</Modal.Title>

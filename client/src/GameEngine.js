@@ -1,7 +1,21 @@
 // GameEngine.js
 
-const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
-const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const suits = ["hearts", "diamonds", "clubs", "spades"];
+const values = [
+  "A",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K"
+];
 
 function generateDeck() {
   const deck = [];
@@ -39,18 +53,18 @@ function checkForBooks(hand) {
     }
   }
 
-  const remainingHand = hand.filter(card => !books.includes(card.value));
+  const remainingHand = hand.filter((card) => !books.includes(card.value));
   return { books, remainingHand };
 }
 
 function askForCard(fromHand, toHand, value) {
-  const matches = toHand.filter(card => card.value === value);
-  const updatedToHand = toHand.filter(card => card.value !== value);
+  const matches = toHand.filter((card) => card.value === value);
+  const updatedToHand = toHand.filter((card) => card.value !== value);
   const updatedFromHand = [...fromHand, ...matches];
   return {
     success: matches.length > 0,
     fromHand: updatedFromHand,
-    toHand: updatedToHand,
+    toHand: updatedToHand
   };
 }
 
@@ -60,7 +74,7 @@ function drawCard(hand, deck) {
   return {
     hand: [...hand, drawnCard],
     deck: deck.slice(1),
-    card: drawnCard, 
+    card: drawnCard
   };
 }
 
@@ -74,7 +88,7 @@ function initGame() {
     opponentHand,
     playerBooks: [],
     opponentBooks: [],
-    currentPlayer: 'player', // or 'opponent'
+    currentPlayer: "player" // or 'opponent'
   };
 }
 
@@ -93,8 +107,7 @@ function aiChooseCard(opponentHand) {
 }
 
 function opponentTurn(gameState) {
-
-  if (gameState.currentPlayer !== 'opponent') {
+  if (gameState.currentPlayer !== "opponent") {
     console.log("Not opponent's turn, skipping");
     return gameState;
   }
@@ -124,7 +137,7 @@ function opponentTurn(gameState) {
     updatedOpponentHand = drawResult.hand;
     updatedDeck = drawResult.deck;
   } else {
-    alert(`You gave the opponent your ${valueToAsk}s.`)
+    alert(`You gave the opponent your ${valueToAsk}s.`);
   }
 
   const { books, remainingHand } = checkForBooks(updatedOpponentHand);
@@ -137,12 +150,31 @@ function opponentTurn(gameState) {
     playerHand: updatedPlayerHand,
     opponentBooks: [...gameState.opponentBooks, ...books],
     deck: updatedDeck,
-    currentPlayer: 'player',
+    currentPlayer: "player"
   };
 }
 
+const initMultiplayerGame = (playerCount) => {
+  const deck = shuffle(generateDeck());
+  const players = Array.from({ length: playerCount }, () => deal(deck, 7));
+  return {
+    deck,
+    players,
+    playerBooks: Array(playerCount).fill([]),
+    currentPlayer: 0
+  };
+};
 
-
+const askForCardMultiplayer = (fromHand, toHand, value) => {
+  const matches = toHand.filter((card) => card.value === value);
+  const updatedToHand = toHand.filter((card) => card.value !== value);
+  const updatedFromHand = [...fromHand, ...matches];
+  return {
+    success: matches.length > 0,
+    fromHand: updatedFromHand,
+    toHand: updatedToHand
+  };
+};
 
 module.exports = {
   initGame,
@@ -150,4 +182,6 @@ module.exports = {
   drawCard,
   checkForBooks,
   opponentTurn,
+  initMultiplayerGame,
+  askForCardMultiplayer
 };

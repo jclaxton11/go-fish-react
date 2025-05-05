@@ -8,6 +8,18 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// // Log when Redis connects
+// redisClient.on("connect", () => {
+//   console.log("Redis connected");
+// });
+
+// // Log any Redis errors
+// redisClient.on("error", (err) => {
+//   console.error("Redis error:", err);
+// });
+
+// await redisClient.connect();
+
 // Handle WebSocket Connections
 wss.on("connection", (ws) => {
   console.log("Client connected");
@@ -15,48 +27,57 @@ wss.on("connection", (ws) => {
   ws.on("message", async (message) => {
     const data = JSON.parse(message);
     console.log("Received from client:", data);
-    switch (data.type) {
-      case "JOIN_GAME":
-        console.log(`${data.playerId} joined ${data.gameId}`);
-        // Step 1: Add player to Redis (could store a game state, or player info)
-        redisClient.sAdd(
-          `game:${data.gameId}:players`,
-          data.playerId,
-          (err, res) => {
-            if (err) {
-              console.error("Error adding player to Redis:", err);
-              return;
-            }
 
-            // Step 2: Broadcast to other players in the game that a player has joined
-            wss.clients.forEach((client) => {
-              if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(
-                  JSON.stringify({
-                    type: "PLAYER_JOINED",
-                    playerId: data.playerId,
-                    gameId: data.gameId
-                  })
-                );
-              }
-            });
-          }
-        );
-        break;
+    if (data.type === "JOIN_GAME") {
+      await redisClient.sAdd(`game:${data.gameId}:players`, data.playerId);
+      console.log(`Player ${data.playerId} added to game ${data.gameId}`);
 
-      case "REQUEST_CARD":
-        // Handle card request logic
-        break;
+      const players = await redisClient.sMembers(`game:${data.gameId}:players`);
+      console.log("Players in game:", players);
 
-      // Add more case handlers as needed
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(
+            JSON.stringify({
+              type: "PLAYERS_LIST",
+              gameId: data.gameId,
+              players
+            })
+          );
+        }
+      });
+    }
 
-      default:
-        ws.send(
-          JSON.stringify({ type: "ERROR", message: "Unknown message type" })
-        );
+    if (data.type === "START_GAME") {
+      console.log(`Starting game ${data.gameId}`);
+      const { gameId } = data;
+
+      // Broadcast GAME_STARTED to all clients in this game
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ type: "GAME_STARTED" }));
+        }
+      });
+    }
+
+    if (data.type === "NEXT_TURN") {
+      const { gameId, nextPlayer } = data;
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(
+            JSON.stringify({
+              type: "NEXT_TURN",
+              gameId,
+              nextPlayer
+            })
+          );
+        }
+      });
     }
   });
 
+  // Send initial connection message after client joins
   ws.send(JSON.stringify({ type: "CONNECTED" }));
 });
 
