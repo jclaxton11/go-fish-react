@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Container, Button, Modal } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 import Card from "./CardComponent";
 import {
   initGame,
@@ -13,7 +14,8 @@ export const SinglePlayer = ({ inputMode, setGameStarted }) => {
   const [game, setGame] = useState(null);
   const [winner, setWinner] = useState(null); // Track the winner
   const [showModal, setShowModal] = useState(false); // Show the popup
-  const [mode, setMode] = useState(inputMode);
+  const navigate = useNavigate();
+  
 
   function sortHand(hand) {
     const valueOrder = {
@@ -127,7 +129,7 @@ export const SinglePlayer = ({ inputMode, setGameStarted }) => {
   };
 
   const handleReturnHome = () => {
-    setGameStarted(false);
+    navigate("/");
   };
 
   return (
